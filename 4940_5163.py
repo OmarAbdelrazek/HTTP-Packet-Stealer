@@ -53,11 +53,6 @@ def parse_application_layer_packet(ip_packet_payload: bytes) -> TcpPacket:
     offset = int(str(temp)[2:3],16)
 
     payload = ((ip_packet_payload[offset*4:]))
-
-    # print("source_port: ",source_port)
-    # print("destnation_port: ",destnation_port)
-    # print("offset address: ",offset)
-    
     return TcpPacket(source_port, destnation_port, offset, payload)
 
 
@@ -74,13 +69,13 @@ def parse_network_layer_packet(ip_packet: bytes) -> IpPacket:
     destination_address = ip_packet[16:20]
     
     source_address = parse_raw_ip_addr(source_address)
+
     destination_address = parse_raw_ip_addr(destination_address)
-
-    payload = ip_packet[ihl*4:]
-
     
-
+    payload = ip_packet[ihl*4:]
+    
     return IpPacket(protocol, ihl, source_address, destination_address, payload)
+
 
 def setup_raw_socekt():
     TCP = 0x0006
@@ -89,29 +84,23 @@ def setup_raw_socekt():
 
 
 def main():
-    # Un-comment this line if you're getting too much noisy traffic.
-    # to bind to an interface on your PC. (or you can simply disconnect from the internet)
     stealer = setup_raw_socekt()
     iface_name = "lo"
     stealer.setsockopt(socket.SOL_SOCKET,socket.SO_BINDTODEVICE, bytes(iface_name, "ASCII"))
     while True:
         packet,addr = stealer.recvfrom(4096)
-        print(packet)
         ip_packet = parse_network_layer_packet((packet))
-        # print("protocol: ",ip_packet.protocol)
-        # print("ihl: ",ip_packet.ihl)
-        # print("source address: ",ip_packet.source_address)
-        # print("dest address: ",ip_packet.destination_address)
         if ip_packet.protocol == 6:
             tcp_packet = parse_application_layer_packet(ip_packet.payload)
-
             try:
                 data = tcp_packet.payload.decode('UTF-8')
-                print(f"[{ip_packet.source_address}:{tcp_packet.src_port}] SENT: ")
-                print(data)
+                if len(tcp_packet.payload) > 0:
+                    print(f"[{ip_packet.source_address}:{tcp_packet.src_port}] SENT: ")
+                    print(data)
             except:
                 print("DATA CAN'T BE DECODED")
     pass
+
 
 
 if __name__ == "__main__":
